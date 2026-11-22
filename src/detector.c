@@ -1,59 +1,70 @@
 #include <linux/module.h>
+#include <linux/string.h>
 #include <linux/init.h>
 #include <linux/kernel.h>
-#include <linux/kprobes.h>
-#include <linux/ptrace.h>
-#include <linux/socket.h>
-#include <net/sock.h>
 #include <linux/sched.h>
+#include <linux/tracepoint.h>
+
+#include "bpf.h"
+#include "yellow_card.h"
+#include "rs.h"
+#include "fork_detector.h"
 
 
-static int sock_ret(struct kretprobe_instance *ri, struct pt_regs *regs)
+// 프로세스 종료 관련 tracepoint 관리
+static struct tracepoint *exit_tp;
+
+static void find_exit_tracepoint(struct tracepoint *tp, void *data){
+    if (strcmp(tp->name,"sched_process_exit") == 0)
+        exit_tp = tp;
+}
+
+static void on_process_exit(void *data, struct task_struct *task, bool group_dead){
+    if (!group_dead)
+        return;
+
+    remove_yellow_card(task_tgid_nr(task));
+}
+
+// 동작 함수들
+
+
+static int __init detector_init(void)
 {
-    int result = (int)regs_return_value(regs);
-    char comm[TASK_COMM_LEN];
-
-    get_task_comm(comm, current);
-
-    pr_info_ratelimited("DoorBraker9: sk_attach_filter pid=%d tid=%d comm=%s ret=%d",task_tgid_nr(current), task_pid_nr(current), comm, result);
-
-    return 0;
-
-}
-
-static int sock_entry(struct kretprobe_instance *ri, struct pt_regs *regs){
-    struct sock *sk;
-    
-    sk = (struct sock *)regs_get_kernel_argument(regs,1);
-
-    if (!sk || sk->sk_family != AF_PACKET)
-        return 1;
-
-    return 0;
-}
-
-struct kretprobe sock_probe = {
-    .kp.symbol_name = "sk_attach_filter",
-    .entry_handler = sock_entry,
-    .handler = sock_ret,
-};
-
-
-static int __init detector_init(void){
     int ret;
 
-    ret = register_kretprobe(&sock_probe);
-    if (ret){
-        pr_err("DoorBraker9 : probe registration failed. code : %d", ret);
+    for_each_kernel_tracepoint(find_exit_tracepoint, NULL);
+    if (!exit_tp)
+        return -ENOENT;
+
+    ret = tracepoint_probe_register(exit_tp, on_process_exit, NULL);
+    if (ret)
         return ret;
-    }
+
+    ret = register_bpf_probe();
+    if (ret) 
+        return ret;
+    
+
+    ret = register_rs_probe();
+    if (ret)
+        return ret;
+
+    ret = register_fork_probe();
+    if (ret)
+        return ret;
 
     pr_info("DoorBraker9: loaded\n");
     return 0;
 }
 
 static void __exit detector_exit(void){
-    unregister_kretprobe(&sock_probe);
+    unregister_bpf_probe();
+    tracepoint_probe_unregister(exit_tp, on_process_exit, NULL);
+    tracepoint_synchronize_unregister();
+    unregister_rs_probe();
+    unregister_fork_probe();
+    clear_yellow_card();
     pr_info("DoorBraker9: unloaded\n");
 }
 
