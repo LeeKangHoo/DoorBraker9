@@ -72,6 +72,25 @@ bool check_yellow_card(pid_t tgid){
     return found;
 }
 
+bool redred(pid_t tgid){
+    struct yellow_card_entry *entry;
+    unsigned long flags;
+    bool found = false;
+
+    raw_spin_lock_irqsave(&yellow_cards_lock, flags);
+
+    hash_for_each_possible(yellow_cards, entry, node, tgid){
+        if (entry->tgid == tgid && entry->in && entry->out){
+            found = true;
+            break;
+        }
+    }
+
+    raw_spin_unlock_irqrestore(&yellow_cards_lock, flags);
+
+    return found;
+}
+
 void remove_yellow_card(pid_t tgid){
     struct yellow_card_entry *entry;
     struct yellow_card_entry *removed = NULL;
@@ -91,6 +110,8 @@ void remove_yellow_card(pid_t tgid){
     raw_spin_unlock_irqrestore(&yellow_cards_lock, flags);
     kfree(removed);
 }
+
+
 
 bool mark_yellow_card(pid_t tgid, int newfd){
     struct yellow_card_entry *entry;

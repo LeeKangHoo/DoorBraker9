@@ -1,5 +1,5 @@
 obj-m += detector.o
-detector-y := src/detector.o src/bpf.o src/yellow_card.o src/rs.o src/fork_detector.o
+detector-y := src/detector.o src/bpf.o src/yellow_card.o src/dup2_detector.o src/fork_detector.o src/execve_detector.o
 ccflags-y += -I$(src)/include
 
 KDIR ?= /lib/modules/$(shell uname -r)/build

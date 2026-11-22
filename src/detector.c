@@ -7,8 +7,9 @@
 
 #include "bpf.h"
 #include "yellow_card.h"
-#include "rs.h"
+#include "dup2_detector.h"
 #include "fork_detector.h"
+#include "execve_detector.h"
 
 
 // 프로세스 종료 관련 tracepoint 관리
@@ -46,13 +47,17 @@ static int __init detector_init(void)
         return ret;
     
 
-    ret = register_rs_probe();
+    ret = register_dup2_probe();
     if (ret)
         return ret;
 
     ret = register_fork_probe();
     if (ret)
         return ret;
+
+
+    register_execve_detector();
+
 
     pr_info("DoorBraker9: loaded\n");
     return 0;
@@ -62,8 +67,9 @@ static void __exit detector_exit(void){
     unregister_bpf_probe();
     tracepoint_probe_unregister(exit_tp, on_process_exit, NULL);
     tracepoint_synchronize_unregister();
-    unregister_rs_probe();
+    unregister_dup2_probe();
     unregister_fork_probe();
+    unregister_execve_detector();
     clear_yellow_card();
     pr_info("DoorBraker9: unloaded\n");
 }
