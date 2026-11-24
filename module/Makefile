@@ -1,14 +1,32 @@
-obj-m += detector.o
-detector-y := src/detector.o src/bpf.o src/yellow_card.o src/dup2_detector.o src/fork_detector.o src/execve_detector.o src/log.o
-ccflags-y += -I$(src)/include
-
+.DEFAULT_GOAL := all
 KDIR ?= /lib/modules/$(shell uname -r)/build
-BUILD_DIR := $(CURDIR)/build
+MODULE_DIR := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+BUILD_DIR := $(MODULE_DIR)/build
+
+include $(MODULE_DIR)/Kbuild
 
 .PHONY: all clean
 
 all:
-	$(MAKE) -C $(KDIR) M=$(CURDIR) MO=$(BUILD_DIR) modules
+	$(MAKE) -C "$(KDIR)" $(KBUILD_ARGS) modules
 
 clean:
-	$(MAKE) -C $(KDIR) M=$(CURDIR) MO=$(BUILD_DIR) clean
+	$(MAKE) -C "$(KDIR)" $(KBUILD_ARGS) clean
+
+ifneq ($(shell grep -qs 'KBUILD_EXTMOD_OUTPUT' "$(KDIR)/Makefile" && printf yes),)
+KBUILD_ARGS := M="$(MODULE_DIR)" MO="$(BUILD_DIR)"
+else
+# Kbuild versions without MO write their outputs directly under M.
+KBUILD_ARGS := M="$(BUILD_DIR)"
+
+.PHONY: prepare-build
+all clean: prepare-build
+
+prepare-build:
+	mkdir -p "$(BUILD_DIR)/src"
+	ln -sfnT "$(MODULE_DIR)/Kbuild" "$(BUILD_DIR)/Kbuild"
+	ln -sfnT "$(MODULE_DIR)/include" "$(BUILD_DIR)/include"
+	for source in $(detector-y:.o=.c); do \
+		ln -sfnT "$(MODULE_DIR)/$$source" "$(BUILD_DIR)/$$source" || exit 1; \
+	done
+endif
