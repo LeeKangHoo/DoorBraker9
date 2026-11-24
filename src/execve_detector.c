@@ -6,6 +6,7 @@
 
 #include "execve_detector.h"
 #include "yellow_card.h"
+#include "log.h"
 
 
 static int on_execve(struct linux_binprm *bprm)
@@ -13,7 +14,8 @@ static int on_execve(struct linux_binprm *bprm)
     pid_t tgid = task_tgid_nr(current);
 
     if (redred(tgid)) {
-        pr_info_ratelimited("DoorBraker9: detected yellow execve tgid=%d file=%s\n",tgid, bprm->filename);
+        event_send(EXECVE,tgid);
+        pr_info_ratelimited("DoorBraker9: RED!! execve is blocked tgid=%d file=%s\n",tgid, bprm->filename);
         return -EPERM;
     }
 

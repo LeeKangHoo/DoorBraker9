@@ -9,6 +9,7 @@
 
 #include "dup2_detector.h"
 #include "yellow_card.h"
+#include "log.h"
 
 struct dup2_data {
     unsigned int oldfd;
@@ -52,15 +53,17 @@ static int dup2_entry(struct kretprobe_instance *ri, struct pt_regs *regs){
 
 static int dup2_ret(struct kretprobe_instance *ri, struct pt_regs *regs){
     struct dup2_data *data = (void *)ri->data;
-    int c_pid = task_tgid_nr(current);
+    int tgid = task_tgid_nr(current);
     long result = (long)regs_return_value(regs);
 
     if (result < 0 || data->newfd > 1 || data->oldfd == data->newfd)
         return 0;
 
-    if (check_yellow_card(c_pid) && is_network_socket(data->oldfd)){
-        if (mark_yellow_card(c_pid,data->newfd))
-            pr_info_ratelimited("DoorBraker9: detected dup2. network socket to %d tgid=%d\n", data->newfd, c_pid);
+    if (check_yellow_card(tgid) && is_network_socket(data->oldfd)){
+        if (mark_yellow_card(tgid,data->newfd)){
+            event_send(DUP2,tgid);
+            pr_info_ratelimited("DoorBraker9: detected dup2. network socket to %d tgid=%d\n", data->newfd, tgid);
+        }
     }
 
     // if (result >= 0)

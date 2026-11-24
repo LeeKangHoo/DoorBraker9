@@ -10,6 +10,7 @@
 #include "dup2_detector.h"
 #include "fork_detector.h"
 #include "execve_detector.h"
+#include "log.h"
 
 
 // 프로세스 종료 관련 tracepoint 관리
@@ -71,6 +72,7 @@ static void __exit detector_exit(void){
     unregister_fork_probe();
     unregister_execve_detector();
     clear_yellow_card();
+    log_exit();
     pr_info("DoorBraker9: unloaded\n");
 }
 
@@ -79,3 +81,4 @@ module_exit(detector_exit);
 
 MODULE_LICENSE("GPL");
 MODULE_DESCRIPTION("TEST DOORBRAKER9");
+

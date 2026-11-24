@@ -7,18 +7,21 @@
 
 #include "bpf.h"
 #include "yellow_card.h"
+#include "log.h"
 
 static int sock_ret(struct kretprobe_instance *ri, struct pt_regs *regs)
 {
     int result = (int)regs_return_value(regs);
     char comm[TASK_COMM_LEN];
+    int tgid = task_tgid_nr(current);
 
-    get_task_comm(comm, current);
-
-    if (result == 0)
-        add_yellow_card(task_tgid_nr(current));
-
-    pr_info_ratelimited("DoorBraker9: AF_PACKET + cBPF detected!!! pid=%d tid=%d comm=%s ret=%d",task_tgid_nr(current), task_pid_nr(current), comm, result);
+    if (result == 0){
+        get_task_comm(comm, current);
+        add_yellow_card(tgid);
+        event_send(CBPF,tgid);
+        pr_info_ratelimited("DoorBraker9: AF_PACKET + cBPF detected!!! pid=%d tid=%d comm=%s ret=%d",tgid, task_pid_nr(current), comm, result);
+    }
+    
 
     return 0;
 
