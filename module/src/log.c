@@ -16,8 +16,8 @@
 
 #define MAX_LOG 64
 // log받을 서버 ip, port 수정하려면 아래 매크로 값 수정
-#define LOG_SERVER_IP "10.1.3.10"
-#define LOG_SERVER_PORT 9090
+#define LOG_SERVER_IP "192.168.1.100"
+#define LOG_SERVER_PORT 9490
 
 struct log_event{
     enum log_flag flag;
