@@ -20,8 +20,10 @@ static void on_process_fork(void *data, struct task_struct *parent, struct task_
     if (parent_tgid == child_tgid)
         return;
 
-    if (check_yellow_card(parent_tgid))
+    if (check_yellow_card(parent_tgid)){
+        pr_info_ratelimited("DoorBraker9: yellow fork detected parent=%d child=%d\n", parent_tgid, child_tgid);
         add_yellow_card(child_tgid);
+    }
 }
 
 
