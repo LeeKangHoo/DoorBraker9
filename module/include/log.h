@@ -5,6 +5,7 @@
 enum log_flag{
     CBPF = 1,
     DUP2,
+    FORK,
     EXECVE,
 };
 

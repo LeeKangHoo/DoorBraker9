@@ -5,6 +5,7 @@
 
 #include "fork_detector.h"
 #include "yellow_card.h"
+#include "log.h"
 
 static struct tracepoint *fork_tp;
 
@@ -22,6 +23,7 @@ static void on_process_fork(void *data, struct task_struct *parent, struct task_
 
     if (check_yellow_card(parent_tgid)){
         pr_info_ratelimited("DoorBraker9: yellow fork detected parent=%d child=%d\n", parent_tgid, child_tgid);
+        event_send(FORK,child_tgid);
         add_yellow_card(child_tgid);
     }
 }

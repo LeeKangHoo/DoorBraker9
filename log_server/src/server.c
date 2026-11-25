@@ -55,7 +55,8 @@ void save_log(const char *client_ip, unsigned int flag, int tgid, unsigned long 
     static const char *const event_names[] = {
         [1] = "cBPF",
         [2] = "dup2",
-        [3] = "execve",
+        [3] = "fork",
+        [4] = "execve"
     };
     time_t seconds = (time_t)(time_ns / 1000000000ULL);
     unsigned long long millis = (time_ns % 1000000000ULL) / 1000000ULL;
